@@ -27,8 +27,9 @@ Manual invoice keying costs SMBs minutes per document, produces payment errors, 
 │   ├── API.md               # Versioned REST contract (v1)
 │   ├── DECISIONS.md         # Architectural Decision Records (ADRs)
 │   └── PROJECT_STATUS.md    # Phase tracking document
-├── frontend/                # Next.js + TypeScript app (Phase 6 — empty for now)
-├── backend/                 # FastAPI monolith + ARQ worker (Phases 3–5 — empty for now)
+├── frontend/                # Next.js 16 + TypeScript + Tailwind v4 (foundation: Phase 2, step 3)
+│   └── src/                 # Auth (Supabase), dashboard shell, workspace context, API client
+├── backend/                 # FastAPI monolith (Phases 2–3) — auth guardrails + workspaces live
 ├── supabase/
 │   └── migrations/          # Forward-only SQL migrations (Phase 2)
 ├── .env.example             # Environment template — copy to .env, never commit .env
