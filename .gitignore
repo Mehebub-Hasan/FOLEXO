@@ -1,0 +1,94 @@
+# ============================================================
+# FOLEXO — Invoice AI
+# Combined Node (frontend) + Python (backend) + environment rules
+# ============================================================
+
+# ── Environment & secrets ────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!*.pub
+secrets/
+
+# ── Python (backend / worker) ────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+.mypy.ini.bak
+pyrightconfig.json
+
+# ── Node / frontend ──────────────────────────────────────────
+node_modules/
+.next/
+out/
+.nuxt/
+.svelte-kit/
+.vite/
+.turbo/
+.parcel-cache/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+coverage/
+*.lcov
+.npm
+.yarn/
+.yarn-integrity
+.pnpm-store/
+storybook-static/
+
+# ── Local databases & services ───────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+redis-data/
+.init-supabase/
+docker/
+
+# ── Supabase CLI ─────────────────────────────────────────────
+supabase/.branches/
+supabase/.temp/
+
+# ── Runtime artifacts, uploads, logs ─────────────────────────
+uploads/
+media/
+tmp/
+temp/
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS / editor noise ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
