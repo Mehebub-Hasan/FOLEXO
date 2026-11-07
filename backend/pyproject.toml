@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "folexo-backend"
+version = "0.1.0"
+description = "FOLEXO (Invoice AI) backend — FastAPI modular monolith"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "SQLAlchemy>=2.0",
+    "asyncpg>=0.29",
+    "greenlet>=3.0",          # required by SQLAlchemy's async extension
+    "alembic>=1.13",
+    "PyJWT>=2.8",
+    "cryptography>=42",       # JWT backend for PyJWT (asymmetric keys in later phases)
+    "python-multipart>=0.0.9", # multipart/form-data parsing (invoice upload)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",            # required by fastapi.testclient
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

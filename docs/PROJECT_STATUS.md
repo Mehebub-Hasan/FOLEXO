@@ -1,7 +1,7 @@
 # FOLEXO — Project Status
 
-**Last updated:** 2026-11-07
-**Current phase:** Phase 1 — Documentation & Repository Scaffolding ✅ **complete**
+**Last updated:** 2026-11-08
+**Current phase:** Phase 2 — Backend Foundation & Supabase Wiring (step 1 ✅)
 
 This document is the single source of truth for delivery progress. Update it at the *end* of each phase, never mid-phase. Specifications referenced below live in [`docs/`](.).
 
@@ -12,7 +12,7 @@ This document is the single source of truth for delivery progress. Update it at 
 | Phase | Scope | Status | Exit criteria | Completed |
 |---|---|---|---|---|
 | **1** | Documentation & repo scaffolding | ✅ Complete | All six spec docs written and reviewed; directory tree, `.gitignore`, `.env.example`, `README.md` in place | 2026-11-07 |
-| **2** | Supabase foundations | ⬜ Not started | `supabase/migrations/0001_init.sql` materialized from [`DATABASE.md`](DATABASE.md); applies cleanly to a fresh Supabase project; storage bucket + policies created; RLS smoke-tested | |
+| **2** | Backend foundation & Supabase wiring *(resequenced: schema is owned by Alembic in `backend/`, not raw SQL in `supabase/migrations/`)* | 🔶 In progress | **Step 1 ✅** backend package (pyproject, config, security, async SQLAlchemy models, FastAPI `/health`), `alembic/0001_initial_schema` verified against model metadata · Step 2: apply `0001` to a real Supabase Postgres, verify types/RLS groundwork; storage bucket + policies |
 | **3** | Backend skeleton | ⬜ Not started | FastAPI app boots; `/health`, `/api/v1/me`, tenant endpoints live; Supabase JWT verification middleware with tests; error envelope + request IDs | |
 | **4** | Invoice upload & CRUD | ⬜ Not started | Upload → Storage → DB row; list/detail/patch/delete per [`API.md`](API.md); tenant-scoped pagination; content-hash duplicate detection | |
 | **5** | Extraction pipeline | ⬜ Not started | Redis + ARQ worker; Stage A (Azure DI) with coordinate persistence; confidence gate + arithmetic validation; Stage B (OpenAI fallback); golden-set accuracy per [`PRD.md`](PRD.md) §9.1 | |
@@ -34,6 +34,7 @@ All architectural decisions are recorded in [`docs/DECISIONS.md`](DECISIONS.md).
 
 ## Changelog
 
+- **2026-11-08** — Phase 2 step 1 complete: `backend/` package initialized (pyproject, pydantic-settings config, security helpers, async SQLAlchemy 2 models for 8 tables, FastAPI app factory with `/health`); Alembic configured async (asyncpg) with `0001_initial_schema` migration; verified: imports cycle-free, `uvicorn` boot + `GET /health` → `{"status": "ok"}`, offline SQL compile, and a programmatic migration ↔ model-metadata consistency check (all columns/constraints/indexes covered). Naming divergences from docs/DATABASE.md (organizations/vendors/invoice_items/document_files/extraction_runs) recorded for doc sync.
 - **2026-11-07** — Phase 1 complete: authored PRD, ARCHITECTURE, DATABASE, API, DECISIONS (ADR-001…008), PROJECT_STATUS; scaffolded `docs/`, `frontend/`, `backend/`, `supabase/migrations/`; created `.gitignore`, `.env.example`, `README.md`.
 
 ## Next up — Phase 2 backlog
