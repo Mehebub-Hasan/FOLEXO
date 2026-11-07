@@ -44,7 +44,7 @@ class Organization(Base, TimestampMixin):
     __tablename__ = "organizations"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(), primary_key=True, server_default=text("gen_random_uuid()")
+        UUID(), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     name: Mapped[str] = mapped_column(Text(), nullable=False)
     slug: Mapped[str] = mapped_column(Text(), nullable=False, unique=True)

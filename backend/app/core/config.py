@@ -39,10 +39,21 @@ class Settings(BaseSettings):
     supabase_service_role_key: str | None = None
     supabase_jwt_secret: str | None = None
 
-    # ── JWT (Supabase-issued HS256 tokens, ADR-004) ──────────────
-    jwt_algorithm: str = "HS256"
+    # ── JWT (Supabase-issued tokens, ADR-004) ────────────────────
+    jwt_algorithm: str = "HS256"  # HS256 (legacy) or RS256 (Supabase JWT signing keys)
+    jwt_public_key: str | None = None  # PEM public key; required for RS256
     jwt_audience: str | None = "authenticated"  # None disables audience checks
+    jwt_issuer: str | None = None  # defaults to {SUPABASE_URL}/auth/v1 when unset
+    jwt_leeway_seconds: int = 10  # clock-skew tolerance on exp validation
     access_token_expire_minutes: int = 60  # for locally minted (test) tokens
+
+    @property
+    def effective_jwt_issuer(self) -> str | None:
+        if self.jwt_issuer:
+            return self.jwt_issuer
+        if self.supabase_url:
+            return f"{self.supabase_url.rstrip('/')}/auth/v1"
+        return None
 
     @property
     def async_database_url(self) -> str:

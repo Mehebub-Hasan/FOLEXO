@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1 import workspaces
 from app.core.config import settings
 from app.database.session import dispose_engine
 
@@ -40,6 +41,8 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         # Deliberately dependency-free; DB/Redis checks arrive with Phase 3.
         return {"status": "ok"}
+
+    app.include_router(workspaces.router, prefix="/api/v1")
 
     return app
 

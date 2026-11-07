@@ -18,7 +18,7 @@ class DocumentFile(Base, TimestampMixin):
     __tablename__ = "document_files"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(), primary_key=True, server_default=text("gen_random_uuid()")
+        UUID(), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(),
