@@ -21,7 +21,9 @@ dependencies = [
     "PyJWT>=2.8",
     "cryptography>=42",       # JWT backend for PyJWT (asymmetric keys in later phases)
     "python-multipart>=0.0.9", # multipart/form-data parsing
-    "httpx>=0.27",            # async HTTP client (Supabase Storage signed upload URLs) (invoice upload)
+    "httpx>=0.27",            # async HTTP client (Supabase Storage signed upload URLs)
+    "azure-ai-documentintelligence>=1.0",  # Stage A extraction (ADR-003)
+    "openai>=1.40",           # Stage B conditional fallback (ADR-003) (invoice upload)
 ]
 
 [project.optional-dependencies]

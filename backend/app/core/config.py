@@ -43,6 +43,19 @@ class Settings(BaseSettings):
     # ── Redis (ARQ broker, docs/ARCHITECTURE.md §5) ──────────────
     redis_url: str = "redis://localhost:6379/0"
 
+    # ── Azure AI Document Intelligence (Stage A extraction) ──────
+    azure_document_intelligence_endpoint: str | None = None
+    azure_document_intelligence_api_key: str | None = None
+    azure_document_intelligence_model: str = "prebuilt-invoice"
+
+    # ── OpenAI (Stage B conditional fallback, ADR-003) ───────────
+    openai_api_key: str | None = None
+    openai_fallback_model: str = "gpt-4o-mini"
+
+    # ── Extraction tuning ────────────────────────────────────────
+    # Critical-field confidence below this triggers the fallback stage.
+    extraction_confidence_threshold: float = 0.75
+
     # ── JWT (Supabase-issued tokens, ADR-004) ────────────────────
     jwt_algorithm: str = "HS256"  # HS256 (legacy) or RS256 (Supabase JWT signing keys)
     jwt_public_key: str | None = None  # PEM public key; required for RS256

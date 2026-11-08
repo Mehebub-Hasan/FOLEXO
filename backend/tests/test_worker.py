@@ -154,10 +154,10 @@ async def test_status_endpoint_surfaces_error_after_failure(
         filename="status-failed.pdf",
     )
 
-    async def exploding_stage() -> None:
+    async def exploding_stage(factory, invoice_uuid, run_id):
         raise RuntimeError("stage exploded")
 
-    monkeypatch.setattr(tasks_module, "run_mock_extraction", exploding_stage)
+    monkeypatch.setattr(tasks_module, "_run_extraction", exploding_stage)
     result = await process_invoice_task(
         {"session_factory": session_factory}, str(invoice.id)
     )
@@ -185,7 +185,11 @@ async def test_task_state_machine_uploaded_to_needs_review(
         uploader_id=seeded["user_a_id"],
         filename="state-machine.pdf",
     )
-    monkeypatch.setattr(tasks_module, "MOCK_STAGE_DELAY_SECONDS", 0.01)
+
+    async def instant_stage(factory, invoice_uuid, run_id):
+        return None
+
+    monkeypatch.setattr(tasks_module, "_run_extraction", instant_stage)
 
     result = await process_invoice_task(
         {"session_factory": session_factory}, str(invoice.id)

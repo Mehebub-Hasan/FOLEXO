@@ -1,7 +1,6 @@
 """ARQ job handlers for the invoice extraction pipeline.
 
-Phase 4 step 1 ships the lifecycle + state machine only; Phase 4 step 2
-replaces `run_mock_extraction` with the real dual-stage pipeline
+Phase 4 step 2: the real pipeline runs via the ExtractionOrchestrator
 (Azure DI Stage A → confidence gate → conditional OpenAI Stage B, ADR-003).
 
 Status contract (docs/ARCHITECTURE.md §5.3):
@@ -10,9 +9,13 @@ Status contract (docs/ARCHITECTURE.md §5.3):
 Observability: every attempt records an `extraction_runs` row (the pipeline
 state of record) with started/finished timestamps, duration, and the error
 message on failure. Redis is *not* durable state — the database rows are.
+
+Failure policy: any orchestrator exception is terminal for this attempt —
+the invoice is marked FAILED with the error recorded on the run row. Retry
+classification (transient provider errors → re-raise for arq) lands with the
+provider-hardening pass.
 """
 
-import asyncio
 import logging
 import time
 import uuid
@@ -24,18 +27,19 @@ from app.models import (
     Invoice,
     InvoiceStatus,
 )
+from app.modules.extraction.orchestrator import ExtractionOrchestrator
 
 logger = logging.getLogger(__name__)
 
 PROCESS_INVOICE_JOB = "process_invoice_task"
 
-# Phase 4.2 removes this placeholder along with the whole mock.
-MOCK_STAGE_DELAY_SECONDS = 2.0
 
-
-async def run_mock_extraction() -> None:
-    """Placeholder for the real OCR/LLM stages (Phase 4 step 2)."""
-    await asyncio.sleep(MOCK_STAGE_DELAY_SECONDS)
+async def _run_extraction(
+    session_factory, invoice_uuid: uuid.UUID, run_id: uuid.UUID
+) -> None:
+    """Seam over the orchestrator so tests can stub the pipeline."""
+    orchestrator = ExtractionOrchestrator(session_factory)
+    await orchestrator.run(invoice_uuid, run_id)
 
 
 async def process_invoice_task(ctx: dict, invoice_id: str) -> str:
@@ -81,8 +85,8 @@ async def process_invoice_task(ctx: dict, invoice_id: str) -> str:
     logger.info("invoice %s: processing started (run %s)", invoice_id, run_id)
 
     try:
-        # ── Pipeline stages (mock until Phase 4 step 2) ──
-        await run_mock_extraction()
+        # ── Pipeline stages (Azure Stage A → gate → Stage B) ──
+        await _run_extraction(session_factory, invoice_uuid, run_id)
 
         finished_at = datetime.now(timezone.utc)
         async with session_factory() as session:
@@ -97,10 +101,11 @@ async def process_invoice_task(ctx: dict, invoice_id: str) -> str:
                 done_run.duration_ms = int((time.monotonic() - started_monotonic) * 1000)
             await session.commit()
 
-        logger.info("invoice %s: needs_review (%d ms)", invoice_id, int((time.monotonic() - started_monotonic) * 1000))
+        elapsed = int((time.monotonic() - started_monotonic) * 1000)
+        logger.info("invoice %s: needs_review (%d ms)", invoice_id, elapsed)
         return "needs_review"
 
-    except Exception as exc:  # noqa: BLE001 — terminal handling; Phase 4.2 adds retry classification
+    except Exception as exc:  # noqa: BLE001 — terminal handling; provider-hardening pass adds retry classification
         logger.exception("invoice %s: processing failed", invoice_id)
         failed_at = datetime.now(timezone.utc)
         async with session_factory() as session:

@@ -5,21 +5,28 @@ pipeline state (status, attempts, timings, errors) and the verbatim provider
 payload (raw JSONB for offline confidence-gate tuning, ADR-003) live on the
 same row. References invoices by table-name string to avoid a circular import
 (invoice.py imports this module's enums).
+
+Phase 4 added audit columns for the dual-stage pipeline: primary_provider,
+normalized_output, confidence_score, fallback_used.
 """
 
+import decimal
 import enum
 import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum as SAEnum,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     Text,
+    false,
     func,
     text,
 )
@@ -84,9 +91,19 @@ class ExtractionRun(Base):
     error_code: Mapped[str | None] = mapped_column(Text())
     error_message: Mapped[str | None] = mapped_column(Text())
     http_status: Mapped[int | None] = mapped_column(Integer())
-    # Verbatim provider response (Azure DI / OpenAI), including page geometry
-    # needed to re-normalize bounding boxes without re-calling the provider.
+    # Verbatim provider response (Azure DI), including page geometry needed to
+    # re-normalize bounding boxes without re-calling the provider.
     raw_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB())
+    # Normalized (post-fallback-merge) extraction as JSON — the schema mirrors
+    # ExtractedInvoiceData in app/modules/extraction/schemas.py.
+    normalized_output: Mapped[dict[str, Any] | None] = mapped_column(JSONB())
+    confidence_score: Mapped[decimal.Decimal | None] = mapped_column(Numeric(4, 3))
+    fallback_used: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=False, server_default=false()
+    )
+    # Provider that produced the primary (Stage A) extraction; constant
+    # "azure_di" while ADR-003 holds.
+    primary_provider: Mapped[str | None] = mapped_column(Text())
     duration_ms: Mapped[int | None] = mapped_column(Integer())
     queued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -103,6 +120,10 @@ class ExtractionRun(Base):
     __table_args__ = (
         CheckConstraint(
             "attempt >= 0 AND max_attempts >= 1", name="ck_extraction_runs_attempts"
+        ),
+        CheckConstraint(
+            "confidence_score IS NULL OR confidence_score BETWEEN 0 AND 1",
+            name="ck_extraction_runs_confidence_range",
         ),
         Index("ix_extraction_runs_invoice", "invoice_id", "queued_at"),
         Index(

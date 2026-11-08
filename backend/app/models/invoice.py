@@ -8,6 +8,7 @@ import decimal
 import enum
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -25,7 +26,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base, TimestampMixin
@@ -176,6 +177,9 @@ class InvoiceItem(Base, TimestampMixin):
     line_total: Mapped[decimal.Decimal | None] = mapped_column(Numeric(15, 4))
     page_number: Mapped[int | None] = mapped_column()
     confidence: Mapped[decimal.Decimal | None] = mapped_column(Numeric(4, 3))
+    # Normalized polygon, ARCHITECTURE.md §7 shape:
+    # {"unit": "normalized", "page_number": n, "polygon": [[x, y], ...]}
+    bbox: Mapped[dict[str, Any] | None] = mapped_column(JSONB())
     source_engine: Mapped[ExtractionEngine | None] = mapped_column(
         extraction_engine_enum
     )
