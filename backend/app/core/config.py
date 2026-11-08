@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str | None = None
     supabase_service_role_key: str | None = None
     supabase_jwt_secret: str | None = None
+    supabase_storage_bucket: str = "invoices"  # private bucket for source documents
 
     # ── JWT (Supabase-issued tokens, ADR-004) ────────────────────
     jwt_algorithm: str = "HS256"  # HS256 (legacy) or RS256 (Supabase JWT signing keys)
