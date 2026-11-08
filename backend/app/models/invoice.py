@@ -36,6 +36,7 @@ from app.models.organization import _enum_values
 
 class InvoiceStatus(str, enum.Enum):
     UPLOADED = "uploaded"
+    QUEUED = "queued"
     PROCESSING = "processing"
     NEEDS_REVIEW = "needs_review"
     READY = "ready"
@@ -113,6 +114,11 @@ class Invoice(Base, TimestampMixin):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     rejection_reason: Mapped[str | None] = mapped_column(Text())
+
+    # Approval tracking (Phase 5). approved_by_id is a Supabase auth.users id
+    # (no FK across schemas — same convention as organization_members.user_id).
+    approved_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID())
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint(

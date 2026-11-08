@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import invoices, workspaces
+from app.api.v1 import invoices, vendors, workspaces
 from app.core.config import settings
 from app.database.session import dispose_engine
 from app.modules.uploads.router import router as uploads_router
@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(workspaces.router, prefix="/api/v1")
     app.include_router(invoices.router, prefix="/api/v1")
     app.include_router(uploads_router, prefix="/api/v1")
+    app.include_router(vendors.router, prefix="/api/v1")
 
     return app
 

@@ -12,7 +12,7 @@ export interface InvoiceStatusResponse {
   error_message: string | null;
 }
 
-const PENDING_STATUSES = new Set<string>(["uploaded", "processing"]);
+const PENDING_STATUSES = new Set<string>(["uploaded", "queued", "processing"]);
 const POLL_INTERVAL_MS = 2000;
 
 /**

@@ -120,13 +120,12 @@ export default function InvoicesPage() {
     getNextPageParam: (lastPage) =>
       lastPage.pagination.has_more ? lastPage.pagination.next_cursor : undefined,
     // Live status transitions: refetch while any row is still in the
-    // pipeline (uploaded / processing); idle polling otherwise.
+    // pipeline (uploaded / queued / processing); idle polling otherwise.
     refetchInterval: (query) => {
       const pages = query.state.data?.pages ?? [];
+      const pendingStatuses = new Set(["uploaded", "queued", "processing"]);
       const hasPending = pages.some((page) =>
-        page.data.some(
-          (item) => item.status === "uploaded" || item.status === "processing"
-        )
+        page.data.some((item) => pendingStatuses.has(item.status))
       );
       return hasPending ? 2000 : false;
     },

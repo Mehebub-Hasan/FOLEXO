@@ -58,9 +58,10 @@ async def process_invoice_task(ctx: dict, invoice_id: str) -> str:
         if invoice is None:
             logger.warning("process_invoice_task: invoice %s not found — skipping", invoice_id)
             return "not_found"
-        if invoice.status != InvoiceStatus.UPLOADED:
+        if invoice.status not in (InvoiceStatus.UPLOADED, InvoiceStatus.QUEUED):
             # arq retries can re-deliver after a terminal failure; never
-            # resurrect a FAILED/NEEDS_REVIEW invoice from a stale job.
+            # resurrect a NEEDS_REVIEW/FAILED invoice from a stale job.
+            # QUEUED = reprocess flow (Phase 5 step 2).
             logger.info(
                 "process_invoice_task: invoice %s in status %s — skipping",
                 invoice_id,

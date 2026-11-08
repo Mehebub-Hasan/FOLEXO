@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import UserPayload, verify_supabase_token
 from app.database.session import get_session
-from app.models import Organization, OrganizationMember
+from app.models import Organization, OrganizationMember, OrganizationRole
 
 _401_HEADERS = {"WWW-Authenticate": "Bearer"}
 
@@ -74,3 +74,41 @@ async def get_current_workspace(
             detail="Access to this workspace is forbidden.",
         )
     return workspace
+
+
+async def get_current_membership(
+    x_workspace_id: Annotated[uuid.UUID, Header(alias="X-Workspace-ID")],
+    current_user: Annotated[UserPayload, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> OrganizationMember:
+    """Resolve the caller's membership row for the requested workspace.
+
+    403 when no membership exists (same message as `get_current_workspace` —
+    foreign ids stay indistinguishable from nonexistent ones).
+    """
+    membership = (
+        await session.execute(
+            select(OrganizationMember).where(
+                OrganizationMember.organization_id == x_workspace_id,
+                OrganizationMember.user_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access to this workspace is forbidden.",
+        )
+    return membership
+
+
+async def require_write_role(
+    member: Annotated[OrganizationMember, Depends(get_current_membership)],
+) -> OrganizationMember:
+    """Gate mutating endpoints: `viewer` is read-only (docs/DATABASE.md §8.3)."""
+    if member.role == OrganizationRole.VIEWER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your role does not permit this action.",
+        )
+    return member
