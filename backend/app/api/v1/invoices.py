@@ -13,6 +13,7 @@ workspace, with comma-separated status filtering (docs/API.md §1.5 envelope).
 import base64
 import re
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
@@ -28,6 +29,8 @@ from app.database.session import get_session
 from app.models import (
     AuditLog,
     DocumentFile,
+    ExtractionRun,
+    ExtractionRunStatus,
     Invoice,
     InvoiceStatus,
     Organization,
@@ -36,6 +39,7 @@ from app.models import (
 from app.modules.uploads.service import (
     validate_upload_constraints,
 )
+from app.workers.enqueue import get_enqueue_process_invoice
 
 router = APIRouter(tags=["invoices"])
 
@@ -91,6 +95,10 @@ async def create_invoice(
     workspace: Annotated[Organization, Depends(get_current_workspace)],
     current_user: Annotated[UserPayload, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    enqueue: Annotated[
+        Callable[[str], Awaitable[bool]],
+        Depends(get_enqueue_process_invoice),
+    ],
 ) -> InvoiceCreateResponse:
     # Re-validate upload constraints — the confirm step is reachable without
     # having gone through presign, so it cannot trust the earlier call.
@@ -139,6 +147,11 @@ async def create_invoice(
     # Server-managed columns (created_at/updated_at) are populated by the INSERT.
     await session.refresh(document)
     await session.refresh(invoice)
+
+    # Hand off to the extraction pipeline. Redis unavailability must never
+    # fail an upload: the invoice stays `uploaded` and is picked up later
+    # (sweeper / manual reprocess).
+    await enqueue(str(invoice.id))
 
     return InvoiceCreateResponse(
         invoice=InvoiceOut(
@@ -275,4 +288,67 @@ async def list_invoices(
     ]
     return ListInvoicesResponse(
         data=items, pagination=Pagination(next_cursor=next_cursor, has_more=has_more)
+    )
+
+
+# ── GET /api/v1/invoices/{id}/status — polling for the pipeline ──────────
+
+
+_STATUS_PROGRESS: dict[InvoiceStatus, int] = {
+    InvoiceStatus.UPLOADED: 0,
+    InvoiceStatus.PROCESSING: 50,
+}
+
+
+class InvoiceStatusResponse(BaseModel):
+    invoice_id: uuid.UUID
+    status: InvoiceStatus
+    progress_percent: int
+    error_message: str | None = None
+
+
+@router.get("/invoices/{invoice_id}/status", response_model=InvoiceStatusResponse)
+async def get_invoice_status(
+    invoice_id: uuid.UUID,
+    workspace: Annotated[Organization, Depends(get_current_workspace)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> InvoiceStatusResponse:
+    """Pipeline status for one invoice — polled every ~2 s while pending.
+
+    Cross-tenant (and unknown) ids return 404, never confirming existence.
+    """
+    row = (
+        await session.execute(
+            select(Invoice.status).where(
+                Invoice.id == invoice_id,
+                Invoice.organization_id == workspace.id,
+            )
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found.",
+        )
+    invoice_status = row[0]
+
+    error_message: str | None = None
+    if invoice_status == InvoiceStatus.FAILED:
+        error_message = (
+            await session.execute(
+                select(ExtractionRun.error_message)
+                .where(
+                    ExtractionRun.invoice_id == invoice_id,
+                    ExtractionRun.status == ExtractionRunStatus.FAILED,
+                )
+                .order_by(ExtractionRun.finished_at.desc().nulls_last())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+    return InvoiceStatusResponse(
+        invoice_id=invoice_id,
+        status=invoice_status,
+        progress_percent=_STATUS_PROGRESS.get(invoice_status, 100),
+        error_message=error_message,
     )

@@ -14,11 +14,13 @@ from app.api.v1 import invoices, workspaces
 from app.core.config import settings
 from app.database.session import dispose_engine
 from app.modules.uploads.router import router as uploads_router
+from app.workers.enqueue import close_arq_pool
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
+    await close_arq_pool()
     await dispose_engine()
 
 

@@ -119,6 +119,17 @@ export default function InvoicesPage() {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.pagination.has_more ? lastPage.pagination.next_cursor : undefined,
+    // Live status transitions: refetch while any row is still in the
+    // pipeline (uploaded / processing); idle polling otherwise.
+    refetchInterval: (query) => {
+      const pages = query.state.data?.pages ?? [];
+      const hasPending = pages.some((page) =>
+        page.data.some(
+          (item) => item.status === "uploaded" || item.status === "processing"
+        )
+      );
+      return hasPending ? 2000 : false;
+    },
   });
 
   const items = invoicesQuery.data?.pages.flatMap((page) => page.data) ?? [];

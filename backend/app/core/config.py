@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str | None = None
     supabase_storage_bucket: str = "invoices"  # private bucket for source documents
 
+    # ── Redis (ARQ broker, docs/ARCHITECTURE.md §5) ──────────────
+    redis_url: str = "redis://localhost:6379/0"
+
     # ── JWT (Supabase-issued tokens, ADR-004) ────────────────────
     jwt_algorithm: str = "HS256"  # HS256 (legacy) or RS256 (Supabase JWT signing keys)
     jwt_public_key: str | None = None  # PEM public key; required for RS256

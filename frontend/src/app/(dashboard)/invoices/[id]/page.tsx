@@ -1,41 +1,32 @@
-import { ArrowLeft } from "lucide-react";
+"use client";
+
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
+import { useParams } from "next/navigation";
 
 import { StatusBadge } from "@/components/invoices/status-badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useInvoiceStatus } from "@/hooks/useInvoiceStatus";
 
 /**
- * Placeholder invoice detail route (Phase 5 builds the real review
- * experience: document viewer + bounding-box overlays + field corrections).
- *
- * Cache Components pattern: the static shell prerenders, and the dynamic
- * `params` read is deferred into the Suspense boundary below.
+ * Invoice detail placeholder with live pipeline status. Phase 5 replaces the
+ * body with the real review experience (document viewer + bounding-box
+ * overlays + field corrections); the polling wiring is production-ready.
  */
-export default function InvoiceDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  return (
-    <Suspense fallback={<DetailFallback />}>
-      <InvoiceDetail params={params} />
-    </Suspense>
-  );
-}
-
-function DetailFallback() {
-  return <div className="py-16 text-center text-sm text-muted-foreground">Loading invoice…</div>;
-}
-
-async function InvoiceDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function InvoiceDetailPage() {
+  const params = useParams<{ id: string }>();
+  const invoiceId = params?.id ?? null;
+  const statusQuery = useInvoiceStatus(invoiceId);
+  const status = statusQuery.data?.status;
+  const pending = status === "uploaded" || status === "processing";
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,15 +38,49 @@ async function InvoiceDetail({ params }: { params: Promise<{ id: string }> }) {
         </Button>
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Invoice review</h1>
-          <p className="font-mono text-xs text-muted-foreground">{id}</p>
+          <p className="font-mono text-xs text-muted-foreground">{invoiceId}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            Review experience <StatusBadge status="processing" />
+            Pipeline status
+            {statusQuery.isFetching && (
+              <RefreshCw className="size-4 animate-spin text-muted-foreground" aria-hidden />
+            )}
           </CardTitle>
+          <CardDescription>
+            Polled every 2 seconds while the invoice is in the pipeline.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {statusQuery.isError ? (
+            <p className="text-sm text-destructive">Could not load invoice status.</p>
+          ) : statusQuery.isPending || !status ? (
+            <p className="text-sm text-muted-foreground">Loading status…</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <StatusBadge status={status} />
+                <span className="text-sm text-muted-foreground">
+                  {statusQuery.data?.progress_percent}% through the pipeline
+                </span>
+              </div>
+              {pending && <Progress value={statusQuery.data?.progress_percent ?? 0} className="h-2" />}
+              {statusQuery.data?.error_message && (
+                <p className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-destructive">
+                  {statusQuery.data.error_message}
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Review experience</CardTitle>
           <CardDescription>
             The document viewer with confidence flags and bounding-box overlays ships in
             Phase 5, after the extraction pipeline runs.
