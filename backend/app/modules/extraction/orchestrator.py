@@ -48,6 +48,8 @@ from app.modules.extraction.schemas import (
     ExtractedInvoiceData,
     ExtractionError,
 )
+from app.modules.duplicates.detector import check_duplicates
+from app.modules.validation.engine import validate_invoice_financials
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +139,7 @@ class ExtractionOrchestrator:
             if document is None:
                 raise ExtractionError(f"document {invoice.document_id} missing for invoice {invoice_id}")
             uploaded_by_id = document.uploaded_by_id
+            file_hash = document.content_hash
 
         # ── Stage A + gate + conditional Stage B ──
         document_bytes = await self._fetcher.fetch(document.storage_path)
@@ -159,6 +162,7 @@ class ExtractionOrchestrator:
             final_engine=final_engine,
             latency_ms=latency_ms,
             uploaded_by_id=uploaded_by_id,
+            file_hash=file_hash,
         )
         return final_data
 
@@ -202,6 +206,7 @@ class ExtractionOrchestrator:
         final_engine: ExtractionEngine,
         latency_ms: int,
         uploaded_by_id: uuid.UUID,
+        file_hash: str | None,
     ) -> None:
         finished_at = datetime.now(timezone.utc)
         async with self._session_factory() as session:
@@ -233,30 +238,47 @@ class ExtractionOrchestrator:
                     InvoiceItem.is_corrected == False,  # noqa: E712 — SQL boolean
                 )
             )
+            item_rows: list[InvoiceItem] = []
             for position, item in enumerate(data.line_items, start=1):
-                session.add(
-                    InvoiceItem(
-                        organization_id=invoice.organization_id,
-                        invoice_id=invoice.id,
-                        line_number=position,
-                        description=item.description,
-                        quantity=_quantize(item.quantity),
-                        unit_price=_quantize(item.unit_price),
-                        tax_rate=None,
-                        line_total=_quantize(item.line_total),
-                        page_number=item.page_number,
-                        confidence=self._safe_confidence(item.confidence),
-                        bbox=(
-                            {
-                                "unit": "normalized",
-                                "page_number": item.page_number,
-                                "polygon": item.bounding_box,
-                            }
-                            if item.bounding_box
-                            else None
-                        ),
-                        source_engine=final_engine,
-                    )
+                item_row = InvoiceItem(
+                    organization_id=invoice.organization_id,
+                    invoice_id=invoice.id,
+                    line_number=position,
+                    description=item.description,
+                    quantity=_quantize(item.quantity),
+                    unit_price=_quantize(item.unit_price),
+                    tax_rate=None,
+                    line_total=_quantize(item.line_total),
+                    page_number=item.page_number,
+                    confidence=self._safe_confidence(item.confidence),
+                    bbox=(
+                        {
+                            "unit": "normalized",
+                            "page_number": item.page_number,
+                            "polygon": item.bounding_box,
+                        }
+                        if item.bounding_box
+                        else None
+                    ),
+                    source_engine=final_engine,
+                )
+                item_rows.append(item_row)
+                session.add(item_row)
+
+            # ── Deterministic validation + duplicate signals (Phase 5) ──
+            issues = validate_invoice_financials(invoice, item_rows)
+            invoice.validation_errors = [
+                issue.model_dump(mode="json") for issue in issues
+            ]
+            is_duplicate, duplicate_reasons = await check_duplicates(
+                session, invoice, file_hash
+            )
+            invoice.is_possible_duplicate = is_duplicate
+            if duplicate_reasons:
+                logger.info(
+                    "invoice %s duplicate signals: %s",
+                    invoice_id,
+                    [reason["rule"] for reason in duplicate_reasons],
                 )
 
             run = await session.get(ExtractionRun, run_id)

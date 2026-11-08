@@ -98,6 +98,9 @@ class Invoice(Base, TimestampMixin):
     is_possible_duplicate: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=False, server_default=false()
     )
+    # Structured ValidationIssue dicts from the deterministic rules engine
+    # (app/modules/validation) — [{code, field, message, severity, details}]
+    validation_errors: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB())
 
     # ── Lifecycle (docs/ARCHITECTURE.md §5.3) ────────────────────────
     status: Mapped[InvoiceStatus] = mapped_column(
