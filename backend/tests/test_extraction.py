@@ -197,7 +197,7 @@ async def test_case_a_high_confidence_skips_fallback(seeded, session_factory) ->
         vendor = await session.get(Vendor, updated.vendor_id)
         assert vendor is not None
         assert vendor.name == "Acme GmbH"
-        assert vendor.name_norm == "acme-gmbh"
+        assert vendor.name_norm == "acme"  # corporate suffix ("GmbH") stripped
         assert vendor.tax_id == "DE811907980"
 
         items = (

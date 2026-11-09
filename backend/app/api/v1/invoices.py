@@ -604,7 +604,7 @@ async def _apply_patch(
             ).scalar_one_or_none()
             if vendor is None:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="Unknown vendor for this workspace.",
                 )
         invoice.vendor_id = payload.vendor_id

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import type { InvoiceDetail, Vendor } from "@/lib/api-types";
+import type { InvoiceDetail, VendorDirectoryEntry } from "@/lib/api-types";
 
 export interface PatchLineItemInput {
   description: string | null;
@@ -78,8 +78,8 @@ export function useVendors(enabled: boolean) {
   return useQuery({
     queryKey: ["vendors"],
     enabled,
-    queryFn: async (): Promise<Vendor[]> => {
-      const response = await api.get<Vendor[]>("/api/v1/vendors");
+    queryFn: async (): Promise<VendorDirectoryEntry[]> => {
+      const response = await api.get<VendorDirectoryEntry[]>("/api/v1/vendors");
       return response.data;
     },
     staleTime: 60_000,
@@ -90,12 +90,18 @@ export function useVendors(enabled: boolean) {
 export function useCreateVendor() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; tax_id?: string | null; email?: string | null }): Promise<Vendor> => {
-      const response = await api.post<Vendor>("/api/v1/vendors", input);
+    mutationFn: async (input: {
+      name: string;
+      tax_identifier?: string | null;
+      email?: string | null;
+      default_currency?: string | null;
+    }): Promise<VendorDirectoryEntry> => {
+      const response = await api.post<VendorDirectoryEntry>("/api/v1/vendors", input);
       return response.data;
     },
     onSuccess: (vendor) => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors-directory"] });
       return vendor;
     },
   });

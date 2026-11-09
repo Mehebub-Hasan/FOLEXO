@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
@@ -39,7 +39,6 @@ from app.models import (
     Invoice,
     InvoiceItem,
     InvoiceStatus,
-    Vendor,
 )
 from app.modules.extraction.azure_extractor import AzureInvoiceExtractor
 from app.modules.extraction.base import BaseInvoiceExtractor
@@ -50,6 +49,7 @@ from app.modules.extraction.schemas import (
 )
 from app.modules.duplicates.detector import check_duplicates
 from app.modules.validation.engine import validate_invoice_financials
+from app.modules.vendors.matcher import find_or_create_vendor
 
 logger = logging.getLogger(__name__)
 
@@ -214,9 +214,15 @@ class ExtractionOrchestrator:
             if invoice is None:
                 raise ExtractionError(f"invoice {invoice_id} vanished mid-pipeline")
 
-            vendor = await self._resolve_vendor(
-                session, invoice, data, uploaded_by_id=uploaded_by_id
+            vendor = await find_or_create_vendor(
+                session,
+                invoice.organization_id,
+                data.vendor_name,
+                data.vendor_tax_id,
+                created_by_id=uploaded_by_id,
+                default_currency=data.currency,
             )
+            invoice.vendor_id = vendor.id if vendor else None
 
             invoice.vendor_id = vendor.id if vendor else None
             invoice.invoice_number = data.invoice_number
@@ -304,56 +310,6 @@ class ExtractionOrchestrator:
             len(data.line_items),
             latency_ms,
         )
-
-    async def _resolve_vendor(
-        self,
-        session: AsyncSession,
-        invoice: Invoice,
-        data: ExtractedInvoiceData,
-        *,
-        uploaded_by_id: uuid.UUID,
-    ) -> Vendor | None:
-        """Match by tax id first, then normalized name; create when unknown."""
-        if not data.vendor_name and not data.vendor_tax_id:
-            return None
-
-        if data.vendor_tax_id:
-            vendor = (
-                await session.execute(
-                    select(Vendor).where(
-                        Vendor.organization_id == invoice.organization_id,
-                        Vendor.tax_id == data.vendor_tax_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            if vendor is not None:
-                return vendor
-
-        if data.vendor_name:
-            name_norm = _UNSAFE_SLUG_CHARS.sub("-", data.vendor_name.strip().lower()).strip("-")
-            vendor = (
-                await session.execute(
-                    select(Vendor).where(
-                        Vendor.organization_id == invoice.organization_id,
-                        Vendor.name_norm == name_norm,
-                    )
-                )
-            ).scalar_one_or_none()
-            if vendor is not None:
-                return vendor
-
-            vendor = Vendor(
-                organization_id=invoice.organization_id,
-                name=data.vendor_name,
-                name_norm=name_norm,
-                tax_id=data.vendor_tax_id,
-                default_currency=data.currency,
-                created_by_id=uploaded_by_id,
-            )
-            session.add(vendor)
-            await session.flush()
-            return vendor
-        return None
 
     @staticmethod
     def _safe_currency(currency: str | None) -> str | None:

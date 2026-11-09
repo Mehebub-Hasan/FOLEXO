@@ -39,6 +39,45 @@ export interface Vendor {
   default_currency: string | null;
 }
 
+export interface VendorDirectoryEntry {
+  id: string;
+  name: string;
+  normalized_name: string;
+  email: string | null;
+  address: string | null;
+  tax_identifier: string | null;
+  default_currency: string | null;
+  invoice_count: number;
+  total_spend: string | null;
+  last_invoice_date: string | null;
+}
+
+export interface VendorInvoiceRow {
+  id: string;
+  status: InvoiceStatus;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  total_amount: string | null;
+  currency_code: string | null;
+  created_at: string;
+}
+
+export interface VendorDetailResponse {
+  id: string;
+  name: string;
+  normalized_name: string;
+  email: string | null;
+  address: string | null;
+  tax_identifier: string | null;
+  notes: string | null;
+  default_currency: string | null;
+  invoice_count: number;
+  total_spend: string | null;
+  last_invoice_date: string | null;
+  invoices: VendorInvoiceRow[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
 export interface InvoiceLineItem {
   id: string;
   line_number: number;
