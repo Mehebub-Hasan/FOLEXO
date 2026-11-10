@@ -49,6 +49,7 @@ from app.modules.uploads.service import (
 )
 from app.modules.duplicates.detector import check_duplicates
 from app.modules.validation.engine import validate_invoice_financials
+from app.core.rate_limit import reprocess_rate_limit
 from app.workers.enqueue import get_enqueue_process_invoice
 
 router = APIRouter(tags=["invoices"])
@@ -766,6 +767,7 @@ async def reprocess_invoice(
         Callable[[str], Awaitable[bool]],
         Depends(get_enqueue_process_invoice),
     ],
+    _rate_limit: Annotated[None, Depends(reprocess_rate_limit)],
 ) -> InvoiceDetailResponse:
     invoice = await session.get(Invoice, invoice_id)
     if invoice is None or invoice.organization_id != workspace.id:

@@ -1,14 +1,18 @@
 """FastAPI application factory.
 
-Phase 2 keeps the surface minimal: CORS + a dependency-free liveness probe.
-Routers, auth dependencies, and DB-backed checks land in Phase 3.
+Phase 7 hardening: a global handler masks every unhandled exception behind a
+reference ID — full tracebacks stay in server logs; clients never see stack
+details, SQL fragments, or configuration values.
 """
 
+import logging
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1 import invoices, workspaces
 from app.core.config import settings
@@ -18,6 +22,8 @@ from app.modules.exports.router import router as exports_router
 from app.modules.uploads.router import router as uploads_router
 from app.modules.vendors.router import router as vendors_router
 from app.workers.enqueue import close_arq_pool
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -47,6 +53,24 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         # Deliberately dependency-free; DB/Redis checks arrive with Phase 3.
         return {"status": "ok"}
+
+    @app.exception_handler(Exception)
+    async def mask_unhandled_exception(request: Request, exc: Exception) -> JSONResponse:
+        """Last-resort handler: log everything server-side, return nothing."""
+        reference_id = uuid.uuid4()
+        logger.exception(
+            "unhandled exception (reference %s) on %s %s",
+            reference_id,
+            request.method,
+            request.url.path,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "InternalServerError",
+                "message": f"An unexpected error occurred. Reference ID: {reference_id}",
+            },
+        )
 
     app.include_router(workspaces.router, prefix="/api/v1")
     app.include_router(invoices.router, prefix="/api/v1")

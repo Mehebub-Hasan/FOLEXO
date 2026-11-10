@@ -13,8 +13,10 @@ ADRs are immutable once Accepted; to change a decision, write a new ADR that sup
 | [ADR-006](#adr-006) | UUID primary keys | Accepted |
 | [ADR-007](#adr-007) | `NUMERIC(15,4)` for all monetary values | Accepted |
 | [ADR-008](#adr-008) | Spatial coordinates stored as normalized JSONB polygons | Accepted |
+| [ADR-009](#adr-009) | PostgreSQL RLS defense-in-depth paired with FastAPI dependency verification | Accepted |
+| [ADR-010](#adr-010) | Per-user sliding-window rate limiting on ingestion endpoints | Accepted |
 
-All dated **2026-11-07**. Deciders: founding team.
+All dated **2026-11-07** (ADR-009/010: 2026-11-10). Deciders: founding team.
 
 ---
 
@@ -199,3 +201,57 @@ Store per-field bounding polygons in `invoice_fields.bbox` (JSONB) in a canonica
 - (+) Frontend renders `x × rendered_width` directly — resolution-independent, no provider SDK in the client.
 - (+) Engine swaps don't touch the storage contract.
 - (−) JSONB lacks rigid schema enforcement — polygon shape validation lives in the application layer and is documented as the contract here; acceptable because coordinates are written by one worker path only.
+
+---
+
+## ADR-009 — PostgreSQL RLS defense-in-depth paired with FastAPI dependency verification
+
+**Status:** Accepted · 2026-11-10 · Extends [ADR-005](#adr-005) (shared-schema tenancy)
+
+### Context
+ADR-005 chose shared-schema multi-tenancy with RLS as defense-in-depth. Phase 7 implemented it. Two access paths reach the database: (1) the API/worker, connecting as `postgres`/`service_role`, which verify the Supabase JWT locally, resolve workspace membership against `organization_members` on every request (`get_current_workspace` / `require_write_role`), and filter every query by `organization_id` in the repository layer; (2) direct Supabase-client access with anon/authenticated keys (Supabase JS reads, storage policies, future Realtime), where RLS is the *only* control.
+
+### Decision
+- RLS is enabled on all eight application tables. Policies are written **`TO authenticated`** — the Supabase client role — using a `SECURITY DEFINER` helper `auth.current_user_has_workspace_access(org_id)` (stable, `search_path` pinned).
+- Role scoping is load-bearing, not cosmetic: the helper reads `auth.uid()`, which is NULL outside a Supabase request context. Untargeted policies would also bind the `postgres` role the API/worker connect as — every backend query would silently return zero rows. `authenticated`-only policies make the API path structurally immune while `service_role` (BYPASSRLS) stays privileged.
+- Application-layer verification remains the **primary** control (membership re-checked per request, viewer role gating, tenant-filtered queries). RLS exists so that a forgotten `WHERE` clause, a buggy join, or direct Supabase-client access cannot cross tenants.
+- `audit_logs` gets SELECT + INSERT policies only — the append-only guarantee is enforced at the database level, not just by API discipline.
+- Apply path: `supabase/migrations/0002_row_level_security.sql` (canonical SQL, single source) executed verbatim by Alembic revision `0005`, so `alembic upgrade head` remains the only migration mechanism. Alembic `0005` is compile-verified offline; **runtime application against real Supabase Postgres and the cross-tenant RLS test suite are Phase 8 gates.**
+
+### Alternatives considered
+- **RLS as the only control** (drop API-layer checks, set per-request JWT claims on the postgres connection): rejected — per-request `SET LOCAL request.jwt.claims` through asyncpg/SQLAlchemy is fragile (pool recycling, forgotten resets) and would couple every query to GUC state.
+- **Policies without role clauses** (apply to PUBLIC): rejected for the reason above.
+- **Force RLS + per-tenant connection roles**: rejected — incompatible with a pooled service connection.
+
+### Consequences
+- (+) Two independent controls must fail simultaneously for a cross-tenant leak; both are covered by tests (dependency tests on SQLite; RLS by the Phase 8 pgTAP/pytest suite on real PG).
+- (+) Direct Supabase-client features (storage policies, Realtime) inherit tenancy for free.
+- (−) RLS behavior is invisible on SQLite — the automated suite exercises the API-layer control only; the database control's runtime proof is deferred to Phase 8 on real Postgres.
+- (−) Anyone querying as `authenticated` without a valid Supabase JWT sees nothing — expected, but surprising during manual DBA debugging.
+- (−) The canonical SQL lives in one file applied through Alembic; DBAs working purely in the Supabase dashboard must know that Alembic owns the schema.
+
+---
+
+## ADR-010 — Per-user sliding-window rate limiting on ingestion endpoints
+
+**Status:** Accepted · 2026-11-10
+
+### Context
+The ingestion endpoints are the abuse surface: `POST /api/v1/uploads/presign` mints storage credentials and triggers provider cost, `POST /api/v1/invoices/{id}/reprocess` re-runs paid extraction. docs/API.md §1.4 promised 60/120-per-minute global limits; on the eve of launch the expensive endpoints need tighter, identity-keyed limits.
+
+### Decision
+- In-house **per-user sliding-window limiter** (`app/core/rate_limit.py`), applied as FastAPI **dependencies** chained after `get_current_user`, so limits key on the verified JWT subject — never on IP or client headers, which are spoofable and wrong behind proxies/NAT for multi-tenant SaaS.
+- Limits: presign **30/min/user**, reprocess **10/min/user** (configurable `RateRule`); violations return `429` with `Retry-After`; a blocked attempt is not recorded, so it cannot extend a lockout.
+- Store: per-process in-memory deques. The API is single-process today, where this is exact and adds zero infrastructure.
+
+### Alternatives considered
+- **slowapi** (per-IP, middleware-based): rejected — IP keying punishes offices behind one NAT and rewards spoofers; middleware runs before auth, so identity keying would need bespoke plumbing anyway.
+- **Redis-backed limiter from day one**: correct for multi-replica, but no Redis exists in the local/test loop yet; the `hit()`/`RateRule` interface is the swap point. Tracked for Phase 8 (must land before the API scales past one replica, or limits silently become per-replica).
+- **No limits until abuse**: rejected — storage signing + paid LLM calls are the cost surface; retrofitting is what this ADR avoids.
+
+### Consequences
+- (+) Identity-keyed, deterministic, zero-dependency; windows are unit-testable via an injectable clock (blocked attempts don't extend lockout).
+- (+) Limits count *attempts*, including requests that later 409 — an attacker cannot pre-validate for free.
+- (−) In-memory state is per-replica: multi-replica deployment makes effective limits N× looser. The Redis swap is a Phase 8 requirement, not optional.
+- (−) In-memory state is lost on restart (limits reset) — acceptable for abuse braking; not a billing control.
+- (+/−) 429s surface `Retry-After` and a plain message consistent with the error-masking policy (ADR on masking, Phase 7 step 2).

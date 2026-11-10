@@ -1,9 +1,17 @@
 # FOLEXO — Project Status
 
 **Last updated:** 2026-11-10
-**Current phase:** Phase 6 — Dashboard, Exports & Hardening (step 2 ✅)
+**Current phase:** MVP Stage 1 — Phases 1–7 ✅ **100% complete** · Phase 8 (hardening & launch prep) 🔶 in progress
 
 This document is the single source of truth for delivery progress. Update it at the *end* of each phase, never mid-phase. Specifications referenced below live in [`docs/`](.).
+
+> **MVP Stage 1 status caveat (read before trusting "complete"):** all
+> features are code-complete and verified by the automated suite against
+> in-process SQLite. Everything that requires live infrastructure — real
+> Supabase Postgres (Alembic `0001`–`0005` have never been applied to a real
+> database, including the RLS policies), live Redis, real Azure DI / OpenAI
+> keys, browser-level E2E, and the PRD §9.1 accuracy measurement on real
+> invoices — is **still outstanding** and tracked in Phase 8.
 
 ---
 
@@ -12,13 +20,28 @@ This document is the single source of truth for delivery progress. Update it at 
 | Phase | Scope | Status | Exit criteria | Completed |
 |---|---|---|---|---|
 | **1** | Documentation & repo scaffolding | ✅ Complete | All six spec docs written and reviewed; directory tree, `.gitignore`, `.env.example`, `README.md` in place | 2026-11-07 |
-| **2** | Backend foundation & Supabase wiring *(resequenced: schema is owned by Alembic in `backend/`, not raw SQL in `supabase/migrations/`)* | 🔶 In progress | **Step 1 ✅** backend package (pyproject, config, security, async SQLAlchemy models, FastAPI `/health`), `alembic/0001_initial_schema` verified against model metadata · Step 2: apply `0001` to a real Supabase Postgres, verify types/RLS groundwork; storage bucket + policies |
-| **3** | Backend skeleton | ⬜ Not started | FastAPI app boots; `/health`, `/api/v1/me`, tenant endpoints live; Supabase JWT verification middleware with tests; error envelope + request IDs | |
-| **4** | Invoice upload & CRUD | ⬜ Not started | Upload → Storage → DB row; list/detail/patch/delete per [`API.md`](API.md); tenant-scoped pagination; content-hash duplicate detection | |
-| **5** | Extraction pipeline | ⬜ Not started | Redis + ARQ worker; Stage A (Azure DI) with coordinate persistence; confidence gate + arithmetic validation; Stage B (OpenAI fallback); golden-set accuracy per [`PRD.md`](PRD.md) §9.1 | |
-| **6** | Frontend MVP | ⬜ Not started | Auth, upload, review queue, document viewer with bounding-box overlays, approve/reject flows; E2E happy paths pass | |
-| **7** | Exports & dashboard | ⬜ Not started | CSV export with penny-perfect validation; dashboard KPIs; audit log UI | |
-| **8** | Hardening & launch prep | ⬜ Not started | Full test matrix green; load test meets NFR-1/NFR-5; security review (RLS + authz); CI/CD; staging deploy | |
+| **2** | Backend foundation *(schema owned by Alembic in `backend/`)* | ✅ Complete | Models match spec constraints (UUID, `NUMERIC(15,4)`, tz-aware); Alembic `0001` consistent with metadata; app boots | 2026-11-08 |
+| **3** | Auth, workspaces & ingestion | ✅ Complete | JWT verification (HS256/RS256, iss/aud/exp); `get_current_user`/`get_current_workspace` guardrails (401/403); presign → confirm ingestion; 14/14 + 11/11 tests | 2026-11-08/09 |
+| **4** | Worker & extraction pipeline | ✅ Complete | Redis + ARQ worker (300 s / 3 tries / 10 s); state machine with `extraction_runs` audit; Azure Stage A + confidence gate + conditional OpenAI Stage B (ADR-003); benchmark harness (Phase 7) proves gates | 2026-11-09 |
+| **5** | Review & approval workflow | ✅ Complete | Split-screen review with bbox overlays + live status; PATCH re-runs deterministic validation; approve with audit; duplicate + validation engines | 2026-11-09 |
+| **6** | Vendors, dashboard & exports | ✅ Complete | Vendor directory with approved-spend metrics + suffix-normalized matcher; dashboard summary (FX placeholder rates); XLSX/CSV exports | 2026-11-10 |
+| **7** | Evaluation & hardening | ✅ Complete | Golden-dataset benchmark + scorer gates; RLS policies (Alembic `0005`, applied-on-PG still pending); per-user rate limits; error masking with reference IDs | 2026-11-10 |
+| **8** | Launch prep | 🔶 In progress | Apply migrations + RLS to real Supabase and run the cross-tenant RLS test suite; live Redis + Azure/OpenAI pipeline run; PRD §9.1 accuracy on 200 real invoices; browser E2E; load test (NFR-1/NFR-5); CI/CD; docs/API.md sync (≈6 endpoints + renamed fields) | |
+
+---
+
+## Verification (as of 2026-11-10)
+
+| Check | Command | Result |
+|---|---|---|
+| Backend suite | `pytest backend/tests/` | **101 passed** |
+| Coverage (`app/` incl. workers) | `pytest backend/tests/ --cov=app --cov-report=term` | **83%** (323/1932 lines missed; models 100%, validation 91%, orchestrator 85%; gaps: `uploads/service.py` Supabase HTTP paths 51%, `arq_worker.py` entrypoint 0%, dashboard service 33%) |
+| Benchmark scorecard | `cd backend && python -m tests.evaluation.test_runner` | 5 fixtures, all gates pass; **pipeline regression check only — not real-document accuracy** |
+| Migration chain | `alembic upgrade head --sql` | 0001→0005 emit cleanly offline; **never applied to a real database** |
+| Frontend build | `npm run build` | Compiled, 11 routes, zero TS errors |
+| Frontend lint | `npm run lint` | 0 problems |
+
+Test suite notes: backend tests run against in-process SQLite with provider SDKs stubbed; Postgres-specific behavior (native enums, RLS, partial-index placement) is compile-verified but not runtime-verified — that is the Phase 8 gate.
 
 ---
 
