@@ -1,0 +1,39 @@
+{
+  "id": "002-distorted-receipt",
+  "description": "Distorted receipt photo: low confidence, no vendor, no line items in the DI pass — OpenAI fallback must repair.",
+  "mime_type": "image/jpeg",
+  "di_response": {
+    "documents": [
+      {
+        "confidence": 0.55,
+        "fields": {
+          "InvoiceId": {"value_string": "CC-88", "confidence": 0.61},
+          "InvoiceDate": {"value_date": "2026-11-08"},
+          "SubTotal": {"value_currency": {"amount": 49.5}},
+          "TotalTaxAmount": {"value_currency": {"amount": 3.47}},
+          "InvoiceTotal": {"value_currency": {"amount": 52.97}, "confidence": 0.58}
+        }
+      }
+    ],
+    "pages": [{"page_number": 1, "width": 4.0, "height": 6.0}],
+    "content": "C0RNER CAFE RECEIPT #CC-88 2026-11-08 2x FLAT WHITE 9.00 2x CR01SSANT 7.50 ..."
+  },
+  "azure_raw": {"synthetic": true, "model": "prebuilt-invoice"},
+  "openai": {
+    "vendor_name": "Corner Cafe",
+    "vendor_tax_id": null,
+    "invoice_number": "CC-88",
+    "invoice_date": "2026-11-08",
+    "due_date": null,
+    "currency": "USD",
+    "subtotal": "16.50",
+    "tax_amount": "1.32",
+    "total_amount": "17.82",
+    "line_items": [
+      {"description": "Flat white", "quantity": "2", "unit_price": "4.50", "line_total": "9.00"},
+      {"description": "Croissant", "quantity": "2", "unit_price": "3.75", "line_total": "7.50"}
+    ],
+    "confidence_score": 0.55
+  },
+  "simulate_azure_failure": false
+}

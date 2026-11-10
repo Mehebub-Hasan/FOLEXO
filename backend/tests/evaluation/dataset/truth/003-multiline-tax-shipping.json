@@ -1,0 +1,22 @@
+{
+  "id": "003-multiline-tax-shipping",
+  "truth": {
+    "vendor_name": "Beta Logistics Ltd",
+    "vendor_tax_id": null,
+    "invoice_number": "BL-8801",
+    "invoice_date": "2026-10-12",
+    "due_date": "2026-11-11",
+    "currency": "USD",
+    "subtotal": "840.00",
+    "tax_amount": "67.20",
+    "total_amount": "932.20",
+    "line_items": [
+      {"description": "Standing desk", "quantity": "2", "unit_price": "150.00", "line_total": "300.00"},
+      {"description": "Office chair", "quantity": "4", "unit_price": "85.00", "line_total": "340.00"},
+      {"description": "Desk lamp", "quantity": "6", "unit_price": "25.00", "line_total": "150.00"},
+      {"description": "Cable kit", "quantity": "10", "unit_price": "5.00", "line_total": "50.00"}
+    ],
+    "confidence_score": 1.0
+  },
+  "expected": {"fallback_used": false, "validation_codes": ["MATH_TOTAL_MISMATCH"]}
+}

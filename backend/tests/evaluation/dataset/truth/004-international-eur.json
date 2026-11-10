@@ -1,0 +1,21 @@
+{
+  "id": "004-international-eur",
+  "truth": {
+    "vendor_name": "Berliner Digital GmbH",
+    "vendor_tax_id": "DE302456789",
+    "invoice_number": "BD-2026-044",
+    "invoice_date": "2026-10-20",
+    "due_date": "2026-11-19",
+    "currency": "EUR",
+    "subtotal": "2500.00",
+    "tax_amount": "500.00",
+    "total_amount": "3000.00",
+    "line_items": [
+      {"description": "UX design", "quantity": "8", "unit_price": "200.00", "line_total": "1600.00"},
+      {"description": "Backend development", "quantity": "6", "unit_price": "100.00", "line_total": "600.00"},
+      {"description": "Project management", "quantity": "3", "unit_price": "100.00", "line_total": "300.00"}
+    ],
+    "confidence_score": 1.0
+  },
+  "expected": {"fallback_used": false, "validation_codes": []}
+}

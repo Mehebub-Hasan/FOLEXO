@@ -1,0 +1,67 @@
+{
+  "id": "003-multiline-tax-shipping",
+  "description": "Multi-line furniture order with tax AND shipping: total includes shipping, which the MVP schema cannot represent — total extraction must stay correct while validation flags MATH_TOTAL_MISMATCH.",
+  "mime_type": "application/pdf",
+  "di_response": {
+    "documents": [
+      {
+        "confidence": 0.9,
+        "fields": {
+          "VendorName": {"value_string": "Beta Logistics Ltd", "confidence": 0.93},
+          "InvoiceId": {"value_string": "BL-8801"},
+          "InvoiceDate": {"value_date": "2026-10-12"},
+          "DueDate": {"value_date": "2026-11-11"},
+          "CurrencyCode": {"value_string": "USD"},
+          "SubTotal": {"value_currency": {"amount": 840.0}},
+          "TotalTaxAmount": {"value_currency": {"amount": 67.2}},
+          "InvoiceTotal": {"value_currency": {"amount": 932.2}, "confidence": 0.91},
+          "Items": {
+            "value_array": [
+              {
+                "value_object": {
+                  "Description": {"value_string": "Standing desk"},
+                  "Quantity": {"value_number": 2.0},
+                  "UnitPrice": {"value_currency": {"amount": 150.0}},
+                  "Amount": {"value_currency": {"amount": 300.0}}
+                },
+                "confidence": 0.92
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Office chair"},
+                  "Quantity": {"value_number": 4.0},
+                  "UnitPrice": {"value_currency": {"amount": 85.0}},
+                  "Amount": {"value_currency": {"amount": 340.0}}
+                },
+                "confidence": 0.9
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Desk lamp"},
+                  "Quantity": {"value_number": 6.0},
+                  "UnitPrice": {"value_currency": {"amount": 25.0}},
+                  "Amount": {"value_currency": {"amount": 150.0}}
+                },
+                "confidence": 0.89
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Cable kit"},
+                  "Quantity": {"value_number": 10.0},
+                  "UnitPrice": {"value_currency": {"amount": 5.0}},
+                  "Amount": {"value_currency": {"amount": 50.0}}
+                },
+                "confidence": 0.87
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "pages": [{"page_number": 1, "width": 8.5, "height": 11.0}],
+    "content": "BETA LOGISTICS LTD INVOICE BL-8801 ... ITEMS ... SUBTOTAL 840.00 TAX 67.20 SHIPPING 25.00 TOTAL 932.20 USD"
+  },
+  "azure_raw": {"synthetic": true, "model": "prebuilt-invoice"},
+  "openai": null,
+  "simulate_azure_failure": false
+}

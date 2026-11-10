@@ -1,0 +1,59 @@
+{
+  "id": "004-international-eur",
+  "description": "International EUR invoice with three line items and 20% VAT, high confidence, no fallback.",
+  "mime_type": "application/pdf",
+  "di_response": {
+    "documents": [
+      {
+        "confidence": 0.93,
+        "fields": {
+          "VendorName": {"value_string": "Berliner Digital GmbH", "confidence": 0.95},
+          "VendorTaxId": {"value_string": "DE302456789"},
+          "InvoiceId": {"value_string": "BD-2026-044"},
+          "InvoiceDate": {"value_date": "2026-10-20"},
+          "DueDate": {"value_date": "2026-11-19"},
+          "CurrencyCode": {"value_string": "EUR"},
+          "SubTotal": {"value_currency": {"amount": 2500.0}},
+          "TotalTaxAmount": {"value_currency": {"amount": 500.0}},
+          "InvoiceTotal": {"value_currency": {"amount": 3000.0}, "confidence": 0.94},
+          "Items": {
+            "value_array": [
+              {
+                "value_object": {
+                  "Description": {"value_string": "UX design"},
+                  "Quantity": {"value_number": 8.0},
+                  "UnitPrice": {"value_currency": {"amount": 200.0}},
+                  "Amount": {"value_currency": {"amount": 1600.0}}
+                },
+                "confidence": 0.93
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Backend development"},
+                  "Quantity": {"value_number": 6.0},
+                  "UnitPrice": {"value_currency": {"amount": 100.0}},
+                  "Amount": {"value_currency": {"amount": 600.0}}
+                },
+                "confidence": 0.92
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Project management"},
+                  "Quantity": {"value_number": 3.0},
+                  "UnitPrice": {"value_currency": {"amount": 100.0}},
+                  "Amount": {"value_currency": {"amount": 300.0}}
+                },
+                "confidence": 0.91
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "pages": [{"page_number": 1, "width": 8.27, "height": 11.69}],
+    "content": "BERLINER DIGITAL GMBH RECHNUNG BD-2026-044 ... NETTO 2500.00 UST 500.00 BRUTTO 3000.00 EUR"
+  },
+  "azure_raw": {"synthetic": true, "model": "prebuilt-invoice"},
+  "openai": null,
+  "simulate_azure_failure": false
+}

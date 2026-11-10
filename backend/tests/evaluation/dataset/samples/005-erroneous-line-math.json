@@ -1,0 +1,49 @@
+{
+  "id": "005-erroneous-line-math",
+  "description": "Invoice whose PRINTED math is wrong (line 2: 2 x 25.00 printed as 60.00). Extraction must transcribe faithfully (truth = printed values) while validation flags MATH_LINE_ITEM_MISMATCH and MATH_SUBTOTAL_MISMATCH.",
+  "mime_type": "application/pdf",
+  "di_response": {
+    "documents": [
+      {
+        "confidence": 0.88,
+        "fields": {
+          "VendorName": {"value_string": "Gamma Corp", "confidence": 0.9},
+          "InvoiceId": {"value_string": "INV-2026-005"},
+          "InvoiceDate": {"value_date": "2026-10-05"},
+          "DueDate": {"value_date": "2026-11-04"},
+          "CurrencyCode": {"value_string": "USD"},
+          "SubTotal": {"value_currency": {"amount": 500.0}},
+          "TotalTaxAmount": {"value_currency": {"amount": 0.0}},
+          "InvoiceTotal": {"value_currency": {"amount": 500.0}, "confidence": 0.89},
+          "Items": {
+            "value_array": [
+              {
+                "value_object": {
+                  "Description": {"value_string": "Licenses"},
+                  "Quantity": {"value_number": 10.0},
+                  "UnitPrice": {"value_currency": {"amount": 50.0}},
+                  "Amount": {"value_currency": {"amount": 500.0}}
+                },
+                "confidence": 0.9
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Onboarding"},
+                  "Quantity": {"value_number": 2.0},
+                  "UnitPrice": {"value_currency": {"amount": 25.0}},
+                  "Amount": {"value_currency": {"amount": 60.0}}
+                },
+                "confidence": 0.86
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "pages": [{"page_number": 1, "width": 8.5, "height": 11.0}],
+    "content": "GAMMA CORP INVOICE INV-2026-005 LICENSES 10 X 50.00 = 500.00 ONBOARDING 2 X 25.00 = 60.00 SUBTOTAL 500.00 TOTAL 500.00 USD"
+  },
+  "azure_raw": {"synthetic": true, "model": "prebuilt-invoice"},
+  "openai": null,
+  "simulate_azure_failure": false
+}

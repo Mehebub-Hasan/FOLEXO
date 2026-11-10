@@ -1,0 +1,20 @@
+{
+  "id": "001-standard-digital",
+  "truth": {
+    "vendor_name": "Acme GmbH",
+    "vendor_tax_id": "DE811907980",
+    "invoice_number": "INV-2026-001",
+    "invoice_date": "2026-11-01",
+    "due_date": "2026-12-01",
+    "currency": "EUR",
+    "subtotal": "1240.00",
+    "tax_amount": "248.00",
+    "total_amount": "1488.00",
+    "line_items": [
+      {"description": "Consulting", "quantity": "10", "unit_price": "100.00", "line_total": "1000.00", "sku": "CON-10"},
+      {"description": "Support retainer", "quantity": "2", "unit_price": "120.00", "line_total": "240.00"}
+    ],
+    "confidence_score": 1.0
+  },
+  "expected": {"fallback_used": false, "validation_codes": []}
+}

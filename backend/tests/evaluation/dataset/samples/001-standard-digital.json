@@ -1,0 +1,57 @@
+{
+  "id": "001-standard-digital",
+  "description": "Standard clean digital invoice: high confidence, consistent math, EUR.",
+  "mime_type": "application/pdf",
+  "di_response": {
+    "documents": [
+      {
+        "confidence": 0.95,
+        "fields": {
+          "VendorName": {"value_string": "Acme GmbH", "confidence": 0.98},
+          "VendorTaxId": {"value_string": "DE811907980"},
+          "InvoiceId": {"value_string": "INV-2026-001", "confidence": 0.97},
+          "InvoiceDate": {"value_date": "2026-11-01"},
+          "DueDate": {"value_date": "2026-12-01"},
+          "CurrencyCode": {"value_string": "EUR"},
+          "SubTotal": {"value_currency": {"amount": 1240.0}},
+          "TotalTaxAmount": {"value_currency": {"amount": 248.0}},
+          "InvoiceTotal": {
+            "value_currency": {"amount": 1488.0},
+            "confidence": 0.96,
+            "bounding_regions": [
+              {"page_number": 1, "polygon": [6.8, 9.9, 7.42, 9.9, 7.42, 10.12, 6.8, 10.12]}
+            ]
+          },
+          "Items": {
+            "value_array": [
+              {
+                "value_object": {
+                  "Description": {"value_string": "Consulting"},
+                  "Quantity": {"value_number": 10.0},
+                  "UnitPrice": {"value_currency": {"amount": 100.0}},
+                  "Amount": {"value_currency": {"amount": 1000.0}},
+                  "ProductCode": {"value_string": "CON-10"}
+                },
+                "confidence": 0.96
+              },
+              {
+                "value_object": {
+                  "Description": {"value_string": "Support retainer"},
+                  "Quantity": {"value_number": 2.0},
+                  "UnitPrice": {"value_currency": {"amount": 120.0}},
+                  "Amount": {"value_currency": {"amount": 240.0}}
+                },
+                "confidence": 0.94
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "pages": [{"page_number": 1, "width": 8.5, "height": 11.0}],
+    "content": "ACME GMBH\nINVOICE INV-2026-001\nDATE 2026-11-01 DUE 2026-12-01\nCONSULTING 10 X 100.00 = 1000.00\nSUPPORT RETAINER 2 X 120.00 = 240.00\nSUBTOTAL 1240.00 VAT 248.00 TOTAL 1488.00 EUR"
+  },
+  "azure_raw": {"synthetic": true, "model": "prebuilt-invoice"},
+  "openai": null,
+  "simulate_azure_failure": false
+}

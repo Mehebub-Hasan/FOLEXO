@@ -1,0 +1,20 @@
+{
+  "id": "002-distorted-receipt",
+  "truth": {
+    "vendor_name": "Corner Cafe",
+    "vendor_tax_id": null,
+    "invoice_number": "CC-88",
+    "invoice_date": "2026-11-08",
+    "due_date": null,
+    "currency": "USD",
+    "subtotal": "16.50",
+    "tax_amount": "1.32",
+    "total_amount": "17.82",
+    "line_items": [
+      {"description": "Flat white", "quantity": "2", "unit_price": "4.50", "line_total": "9.00"},
+      {"description": "Croissant", "quantity": "2", "unit_price": "3.75", "line_total": "7.50"}
+    ],
+    "confidence_score": 1.0
+  },
+  "expected": {"fallback_used": true, "validation_codes": []}
+}
