@@ -23,7 +23,8 @@ dependencies = [
     "python-multipart>=0.0.9", # multipart/form-data parsing
     "httpx>=0.27",            # async HTTP client (Supabase Storage signed upload URLs)
     "azure-ai-documentintelligence>=1.0",  # Stage A extraction (ADR-003)
-    "openai>=1.40",           # Stage B conditional fallback (ADR-003) (invoice upload)
+    "openai>=1.40",           # Stage B conditional fallback (ADR-003)
+    "openpyxl>=3.1",          # XLSX financial exports (Phase 6) (invoice upload)
 ]
 
 [project.optional-dependencies]

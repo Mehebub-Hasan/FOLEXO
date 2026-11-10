@@ -1,9 +1,10 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { FileUp, Inbox, RefreshCw } from "lucide-react";
+import { Download, FileUp, Inbox, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { InvoiceUploadModal } from "@/components/invoices/InvoiceUploadModal";
 import { StatusBadge } from "@/components/invoices/status-badge";
@@ -16,6 +17,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,6 +35,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, apiErrorMessage } from "@/lib/api";
 import { type Paginated, type InvoiceListItem } from "@/lib/api-types";
+import { downloadExport } from "@/hooks/useDashboard";
 
 const PAGE_SIZE = 25;
 
@@ -103,6 +113,26 @@ function InvoicesTable({ items }: { items: InvoiceListItem[] }) {
 export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [exporting, setExporting] = useState<"xlsx" | "csv" | null>(null);
+
+  const handleExport = async (extension: "xlsx" | "csv") => {
+    setExporting(extension);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      const query = params.toString();
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      await downloadExport(
+        `/api/v1/exports/invoices.${extension}${query ? `?${query}` : ""}`,
+        `invoices_export_${stamp}.${extension}`
+      );
+      toast.success(`Export downloaded (${extension.toUpperCase()})`);
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const invoicesQuery = useInfiniteQuery({
     queryKey: ["invoices", statusFilter],
@@ -142,10 +172,34 @@ export default function InvoicesPage() {
             Every supplier invoice in this workspace, newest first.
           </p>
         </div>
-        <Button onClick={() => setUploadOpen(true)}>
-          <FileUp className="size-4" aria-hidden />
-          Upload invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={exporting !== null}>
+                {exporting !== null ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Download className="size-4" aria-hidden />
+                )}
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Current filters applied</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport("xlsx")}>
+                Download Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
+                Download CSV (.csv)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={() => setUploadOpen(true)}>
+            <FileUp className="size-4" aria-hidden />
+            Upload invoice
+          </Button>
+        </div>
       </div>
 
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>

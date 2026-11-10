@@ -39,6 +39,34 @@ export interface Vendor {
   default_currency: string | null;
 }
 
+export interface RecentActivityInvoice {
+  id: string;
+  vendor_name: string | null;
+  invoice_number: string | null;
+  total_amount: string | null;
+  currency_code: string | null;
+  status: InvoiceStatus;
+  created_at: string;
+}
+
+export interface VendorSpendEntry {
+  vendor_name: string;
+  total_spend: string;
+  currency: string;
+}
+
+export interface DashboardSummary {
+  total_invoices_count: number;
+  pending_review_count: number;
+  approved_invoices_count: number;
+  failed_invoices_count: number;
+  total_approved_spend: string | null;
+  base_currency: string;
+  unpriced_currencies: string[];
+  recent_activity: RecentActivityInvoice[];
+  spend_by_vendor: VendorSpendEntry[];
+}
+
 export interface VendorDirectoryEntry {
   id: string;
   name: string;

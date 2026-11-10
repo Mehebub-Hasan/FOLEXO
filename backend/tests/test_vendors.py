@@ -47,11 +47,13 @@ async def seed_vendor_invoice(
     status: InvoiceStatus,
     total: str,
     invoice_date: date,
+    organization_id: uuid.UUID | None = None,
 ) -> Invoice:
+    organization_id = organization_id or seeded["workspace_a_id"]
     document = DocumentFile(
         id=uuid.uuid4(),
-        organization_id=seeded["workspace_a_id"],
-        storage_path=f"{seeded['workspace_a_id']}/2026/11/{uuid.uuid4()}.pdf",
+        organization_id=organization_id,
+        storage_path=f"{organization_id}/2026/11/{uuid.uuid4()}.pdf",
         original_filename=f"{uuid.uuid4().hex}.pdf",
         mime_type="application/pdf",
         file_size_bytes=1024,
@@ -60,7 +62,7 @@ async def seed_vendor_invoice(
     )
     invoice = Invoice(
         id=uuid.uuid4(),
-        organization_id=seeded["workspace_a_id"],
+        organization_id=organization_id,
         document_id=document.id,
         vendor_id=vendor.id,
         invoice_number=f"INV-{uuid.uuid4().hex[:8]}",

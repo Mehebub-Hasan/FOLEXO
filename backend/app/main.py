@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import invoices, workspaces
 from app.core.config import settings
 from app.database.session import dispose_engine
+from app.modules.dashboard.router import router as dashboard_router
+from app.modules.exports.router import router as exports_router
 from app.modules.uploads.router import router as uploads_router
 from app.modules.vendors.router import router as vendors_router
 from app.workers.enqueue import close_arq_pool
@@ -50,6 +52,8 @@ def create_app() -> FastAPI:
     app.include_router(invoices.router, prefix="/api/v1")
     app.include_router(uploads_router, prefix="/api/v1")
     app.include_router(vendors_router, prefix="/api/v1")
+    app.include_router(exports_router, prefix="/api/v1")
+    app.include_router(dashboard_router, prefix="/api/v1")
 
     return app
 
