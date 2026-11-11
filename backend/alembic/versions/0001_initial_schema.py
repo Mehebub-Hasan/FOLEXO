@@ -71,7 +71,7 @@ def upgrade() -> None:
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("slug", sa.Text(), nullable=False),
         sa.Column("country_code", sa.String(length=2), nullable=True),
-        sa.Column("default_currency", sa.String(length=3), server_default="'USD'", nullable=False),
+        sa.Column("default_currency", sa.String(length=3), server_default="USD", nullable=False),
         sa.Column("created_by_id", postgresql.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -90,7 +90,7 @@ def upgrade() -> None:
         sa.Column(
             "role",
             postgresql.ENUM(name="organization_role", create_type=False),
-            server_default="'member'",
+            server_default="member",
             nullable=False,
         ),
         sa.Column("invited_by_id", postgresql.UUID(), nullable=True),
@@ -209,7 +209,7 @@ def upgrade() -> None:
         sa.Column(
             "status",
             postgresql.ENUM(name="invoice_status", create_type=False),
-            server_default="'uploaded'",
+            server_default="uploaded",
             nullable=False,
         ),
         sa.Column("status_changed_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
@@ -336,7 +336,7 @@ def upgrade() -> None:
         sa.Column(
             "status",
             postgresql.ENUM(name="extraction_run_status", create_type=False),
-            server_default="'queued'",
+            server_default="queued",
             nullable=False,
         ),
         sa.Column("attempt", sa.Integer(), server_default=sa.text("0"), nullable=False),
