@@ -1,41 +1,51 @@
 """ARQ worker entrypoint.
 
 Run locally: `arq app.workers.arq_worker.WorkerSettings`
-(docs/ARCHITECTURE.md §5 — Redis + ARQ, ADR-002).
 """
 
 import logging
-
+import os
+from pathlib import Path
+from urllib.parse import urlparse
+from dotenv import load_dotenv
 from arq.connections import RedisSettings
 
-from app.core.config import settings
 from app.database.session import SessionLocal, dispose_engine
 from app.workers.tasks import process_invoice_task
 
+# Ensure .env is loaded
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
 logger = logging.getLogger(__name__)
+
+# Parse Redis connection URL cleanly with SSL support
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+parsed = urlparse(redis_url)
+
+is_ssl = parsed.scheme == "rediss"
+redis_settings = RedisSettings(
+    host=parsed.hostname or "localhost",
+    port=parsed.port or 6379,
+    password=parsed.password,
+    ssl=is_ssl,
+)
 
 
 async def startup(ctx: dict) -> None:
-    """Initialize the DB connection pool once per worker process."""
+    logger.info("Initializing worker session pool...")
     ctx["session_factory"] = SessionLocal
-    logging.basicConfig(level=settings.log_level)
-    logger.info("worker starting (redis=%s, env=%s)", settings.redis_url, settings.app_env)
 
 
 async def shutdown(ctx: dict) -> None:
+    logger.info("Disposing worker database engine...")
     await dispose_engine()
-    logger.info("worker shut down")
 
 
 class WorkerSettings:
+    redis_settings = redis_settings
     functions = [process_invoice_task]
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = RedisSettings.from_dsn(settings.redis_url)
-
-    # docs/ARCHITECTURE.md §5.2
-    job_timeout = 300   # whole-job cap, seconds
-    max_tries = 3       # total attempts including the first → 2 retries
-    retry_delay = 10    # seconds between attempts
     max_jobs = 10
-    health_check_interval = 60
+    poll_delay = 0.5
